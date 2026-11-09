@@ -8,10 +8,10 @@ import (
 
 // SetupRouter sets up Gin routes and returns the engine pointer (*gin.Engine)
 func SetupRouter() *gin.Engine {
-	r := gin.Default()
+	router := gin.Default()
 
 	// Allow frontend and Backend to communicate with each other
-	r.Use(func(c *gin.Context) {
+	router.Use(func(c *gin.Context) {
 		c.Header("Access-Control-Allow-Origin", "*")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
@@ -22,12 +22,14 @@ func SetupRouter() *gin.Engine {
 		c.Next()
 	})
 	// Checking the  Server Connection
-	r.GET("/", func(c *gin.Context) {
+	router.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "Project Working Successfully ...",
 			"Status":  "OK",
 		})
 	})
+	// Router Api dapara group
+	r := router.Group("/api")
 
 	// Authentication
 	r.POST("/register", controllers.Register)
@@ -41,5 +43,5 @@ func SetupRouter() *gin.Engine {
 	r.POST("/attendance", controllers.MarkAttendance)
 	r.GET("/attendance", controllers.GetAttendance)
 
-	return r
+	return router
 }
