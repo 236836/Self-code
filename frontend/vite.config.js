@@ -7,4 +7,8 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    host: true, // Listens on all local IP addresses, including the LAN IP
+    port: 5173, // Optional: specify your preferred port
+  }
 })

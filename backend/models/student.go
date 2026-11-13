@@ -9,4 +9,5 @@ type Student struct {
 
 	RollNo string `json:"roll_no"`
 	Name   string `json:"name"`
+	status string `json: "status"`
 }

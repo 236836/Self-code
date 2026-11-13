@@ -1,78 +1,223 @@
-import React, { useState, useEffect } from "react";
-import { GetStudents, SubmitAttendance } from "../api";
+import React, { useState } from "react";
+import axios from "axios";
+import { API_URL } from "../api";
 
 function Attendance() {
-    const [students, setStudents] = useState([]);
-    const [studentID, setStudentID] = useState("");
-    const [status, setStatus] = useState("present");
+  const [page, setPage] = useState("dashboard");
+  const [students, setStudents] = useState([]);
+  const [attendanceList, setAttendanceList] = useState([]);
+  const [name, setName] = useState("");
+  const [day, setDay] = useState("1");
+  const [editId, setEditId] = useState(null);
+  const [editName, setEditName] = useState("");
 
-    // Load students on page load
-    useEffect(() => {
-        GetStudents().then((data) => setStudents(data));
-    }, []);
+  const days = ["1", "2", "3", "4", "5", "6", "7"];
 
-    // Submit attendance
-    const handleAttendance = async () => {
-        if (!studentID) {
-            alert("Please select a student!");
-            return;
-        }
+  // Authorization header
+  function getHeaders() {
+    const token = localStorage.getItem("token");
+    return { headers: { Authorization: "Bearer " + token } };
+  }
 
-        const data = {
-            student_id: Number(studentID),
-            status: status
-        };
+  // Load students and attendance
+  async function loadData() {
+    try {
+      const res1 = await axios.get(API_URL + "/students", getHeaders());
+      setStudents(res1.data || []);
 
-        const result = await SubmitAttendance(data);
-        alert("Attendance submitted!");
-        setStudentID("");
-    };
+      const res2 = await axios.get(API_URL + "/attendance", getHeaders());
+      setAttendanceList(res2.data || []);
+    } catch (err) {
+      console.log("Error loading data");
+    }
+  }
 
+  // Add student
+  async function addStudent() {
+    if (name === "") return alert("Enter student name");
+    await axios.post(API_URL + "/students", { name: name }, getHeaders());
+    setName("");
+    loadData();
+  }
+
+  // Update student name
+  async function updateStudent(id) {
+    if (editName === "") return alert("Name cannot be empty");
+
+    try {
+      await axios.put(
+        API_URL + "/students/" + id,
+        { name: editName },
+        getHeaders()
+      );
+      setEditId(null);
+      setEditName("");
+      loadData();
+    } catch (err) {
+      alert("Error updating student name");
+    }
+  }
+
+  // Delete student
+  async function deleteStudent(id) {
+    if (!window.confirm("Delete this student?")) return;
+    await axios.delete(API_URL + "/students/" + id, getHeaders());
+    loadData();
+  }
+
+  // Mark Present or Absent
+  async function mark(id, status) {
+    await axios.post(
+      API_URL + "/attendance",
+      { student_id: Number(id), status: status + "-day" + day },
+      getHeaders()
+    );
+    loadData();
+  }
+
+  // Get status (P, A, or -)
+  function getStatus(id, d) {
+    for (let item of attendanceList) {
+      const sid = item.student_id || item.StudentID;
+      const st = item.status || "";
+
+      if (Number(sid) === Number(id)) {
+        if (st === "present-day" + d) return "P";
+        if (st === "absent-day" + d) return "A";
+      }
+    }
+    return "-";
+  }
+
+  // ======================
+  // 1. DASHBOARD PAGE
+  // ======================
+  if (page === "dashboard") {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-amber-400 via-orange-400 to-rose-400 flex items-center justify-center p-6">
-    <div className="bg-white/95 backdrop-blur-sm w-full max-w-md rounded-2xl shadow-2xl p-8 border border-white/40 hover:shadow-yellow-300/40 transition duration-300">
-      <h1 className="text-2xl font-bold text-center text-gray-800 mb-6">
-        Student Attendance
-      </h1>
+      <div className="min-h-screen bg-orange-100 flex flex-col items-center justify-center">
+        <h1 className="text-4xl font-bold mb-8">Teacher Dashboard</h1>
+        <button
+          onClick={() => {
+            setPage("table");
+            loadData();
+          }}
+          className="bg-orange-600 text-white font-bold px-8 py-4 rounded-lg text-xl shadow-md"
+        >
+          Attendance
+        </button>
+      </div>
+    );
+  }
 
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Select Student:
-      </label>
-      <select
-        value={studentID}
-        onChange={(e) => setStudentID(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-yellow-500 hover:border-yellow-400 transition bg-white"
-      >
-        <option value="">Choose a student</option>
-        {students.map((student) => (
-          <option key={student.ID} value={student.ID}>
-            {student.name}
-          </option>
-        ))}
-      </select>
+  // ======================
+  // 2. ATTENDANCE TABLE PAGE
+  // ======================
+  return (
+    <div className="min-h-screen bg-orange-50 p-8">
+      <div className="max-w-6xl mx-auto bg-white p-6 rounded shadow">
+        
+        <div className="flex justify-between mb-6">
+          <h1 className="text-2xl font-bold">Attendance Table</h1>
+          <button onClick={() => setPage("dashboard")} className="bg-gray-300 px-4 py-2 rounded font-bold">
+            Back
+          </button>
+        </div>
 
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Attendance Status:
-      </label>
-      <select
-        value={status}
-        onChange={(e) => setStatus(e.target.value)}
-        className="w-full border border-gray-300 rounded-lg px-4 py-2 mb-6 focus:outline-none focus:ring-2 focus:ring-yellow-500 hover:border-yellow-400 transition bg-white"
-      >
-        <option value="present">Present</option>
-        <option value="absent">Absent</option>
-      </select>
+        {/* Add Student */}
+        <div className="mb-4 flex gap-3">
+          <input
+            type="text"
+            placeholder="Student name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="border p-2 rounded w-64"
+          />
+          <button onClick={addStudent} className="bg-blue-600 text-white px-4 py-2 rounded font-bold">
+            + Add
+          </button>
+        </div>
 
-      <button
-        type="button"
-        onClick={handleAttendance}
-        className="w-full bg-gradient-to-r from-yellow-400 to-orange-500 hover:from-yellow-500 hover:to-orange-600 hover:scale-[1.02] active:scale-95 text-black py-2.5 rounded-lg font-semibold shadow-md hover:shadow-orange-400/50 transition duration-300"
-      >
-        Submit Attendance
-      </button>
+        {/* Select Day */}
+        <div className="mb-6 flex gap-3 items-center">
+          <p className="font-bold">Select Day:</p>
+          <select value={day} onChange={(e) => setDay(e.target.value)} className="border p-2 rounded">
+            {days.map((d) => (
+              <option key={d} value={d}>Day {d}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Table */}
+        <table className="w-full border border-gray-300">
+          <thead>
+            <tr className="bg-orange-200">
+              <th className="border p-2">Roll No.</th>
+              <th className="border p-2">Name</th>
+              {days.map((d) => (
+                <th key={d} className="border p-2">Day {d}</th>
+              ))}
+              <th className="border p-2">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {students.map((s, index) => {
+              const id = s.id || s.ID;
+              const studentName = s.name || s.Name;
+
+              return (
+                <tr key={index} className="text-center">
+                  <td className="border p-2 font-bold">{id}</td>
+
+                  {/* Name or Edit Box */}
+                  <td className="border p-2 font-bold">
+                    {editId === id ? (
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="border p-1 rounded w-32"
+                      />
+                    ) : (
+                      studentName
+                    )}
+                  </td>
+
+                  {/* Days 1 to 7 */}
+                  {days.map((d) => (
+                    <td key={d} className="border p-2 font-bold">{getStatus(id, d)}</td>
+                  ))}
+
+                  {/* Action Buttons */}
+                  <td className="border p-2">
+                    {editId === id ? (
+                      <button onClick={() => updateStudent(id)} className="bg-blue-500 text-white px-2 py-1 rounded mr-1">
+                        Save
+                      </button>
+                    ) : (
+                      <button onClick={() => { setEditId(id); setEditName(studentName); }} className="bg-yellow-400 px-2 py-1 rounded mr-1">
+                        ✏️
+                      </button>
+                    )}
+
+                    <button onClick={() => mark(id, "present")} className="bg-green-500 text-white px-2 py-1 rounded mr-1">
+                      P
+                    </button>
+                    <button onClick={() => mark(id, "absent")} className="bg-red-400 text-white px-2 py-1 rounded mr-1">
+                      A
+                    </button>
+                    <button onClick={() => deleteStudent(id)} className="bg-gray-700 text-white px-2 py-1 rounded">
+                      🗑️
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+      </div>
     </div>
-  </div>
-);
+  );
 }
 
 export default Attendance;

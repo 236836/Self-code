@@ -1,93 +1,92 @@
 import React, { useState, useEffect } from "react";
 import Register from "./Register";
 import Login from "./Login";
+import Attendance from "./Attendance";
 
 function Homepage() {
-    const [loginPage, setLoginPage] = useState(false);
-    const [signupPage, setSignupPage] = useState(true);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [pageTitle, setPageTitle] = useState("");
+  const [loginPage, setLoginPage] = useState(false);
+  const [signupPage, setSignupPage] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [pageTitle, setPageTitle] = useState("Register");
 
-    // Check token and set pageTitle text
-    useEffect(() => {
-        const token = localStorage.getItem("token");
-        console.log("token: ", token);
+  // On initial load, check if user is already logged in
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      setIsLoggedIn(true);
+      setPageTitle("Student Attendance Dashboard");
+    }
+  }, []);
 
-        if (token) {
-            setIsLoggedIn(true);
-            setSignupPage(false);
-            setLoginPage(false);
-            setPageTitle("Logout / Welcome");
-        } else if (loginPage) {
-            setPageTitle("Login");
-        } else {
-            setSignupPage(true);
-            setPageTitle("Register");
-        }
-    }, [loginPage, signupPage, isLoggedIn]);
+  const handleLoginSuccess = () => {
+    setIsLoggedIn(true);
+    setSignupPage(false);
+    setLoginPage(false);
+    setPageTitle("Student Attendance Dashboard");
+  };
 
-    return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex flex-col items-center justify-center p-6">
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setIsLoggedIn(false);
+    setSignupPage(true);
+    setLoginPage(false);
+    setPageTitle("Register");
+  };
 
-    {/* Title badge */}
-    <button className="bg-white/20 backdrop-blur-md text-white px-5 py-2 rounded-full text-sm font-semibold mb-6 shadow-lg border border-white/30 hover:bg-white/30 hover:scale-105 transition duration-300">
-      {pageTitle}
-    </button>
-
-    {/* Logged In view */}
-    {isLoggedIn && (
-      <div className="bg-white/90 backdrop-blur-sm w-full max-w-md rounded-2xl shadow-2xl p-8 text-center hover:shadow-indigo-300/50 transition duration-300">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">
-          Welcome to the Homepage
-        </h1>
-
-        <button
-          onClick={() => {
-            const token = localStorage.getItem("token");
-            if (token) {
-              localStorage.removeItem("token");
-              setIsLoggedIn(false);
-              setSignupPage(true);
-              setLoginPage(false);
-            }
-          }}
-          className="bg-red-500 hover:bg-red-600 hover:scale-105 active:scale-95 text-white px-6 py-2 rounded-lg font-medium shadow-md hover:shadow-red-400/50 transition duration-300"
-        >
-          Logout
-        </button>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex flex-col items-center justify-center p-6">
+      
+      {/* Title Badge */}
+      <div className="bg-white/20 backdrop-blur-md text-white px-5 py-2 rounded-full text-sm font-semibold mb-6 shadow-lg border border-white/30">
+        {pageTitle}
       </div>
-    )}
 
-    {/* Switch buttons */}
-    {!isLoggedIn && (
-      <div className="flex gap-3 mb-6">
-        <button
-          onClick={() => {
-            setSignupPage(true);
-            setLoginPage(false);
-          }}
-          className="bg-blue-600 hover:bg-blue-700 hover:scale-105 active:scale-95 text-white px-5 py-2 rounded-lg font-medium shadow-md hover:shadow-blue-400/50 transition duration-300"
-        >
-          Register
-        </button>
+      {/* When Logged In: Show Attendance + Logout */}
+      {isLoggedIn ? (
+        <div className="w-full max-w-2xl flex flex-col items-center gap-4">
+          <div className="w-full flex justify-end">
+            <button
+              onClick={handleLogout}
+              className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-lg font-medium shadow-md transition duration-300"
+            >
+              Logout
+            </button>
+          </div>
+          <Attendance />
+        </div>
+      ) : (
+        /* When NOT Logged In: Show Switch Buttons + Login/Register Forms */
+        <>
+          <div className="flex gap-3 mb-6">
+            <button
+              onClick={() => {
+                setSignupPage(true);
+                setLoginPage(false);
+                setPageTitle("Register");
+              }}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg font-medium shadow-md transition duration-300"
+            >
+              Register
+            </button>
 
-        <button
-          onClick={() => {
-            setLoginPage(true);
-            setSignupPage(false);
-          }}
-          className="bg-green-600 hover:bg-green-700 hover:scale-105 active:scale-95 text-white px-5 py-2 rounded-lg font-medium shadow-md hover:shadow-green-400/50 transition duration-300"
-        >
-          Login
-        </button>
-      </div>
-    )}
+            <button
+              onClick={() => {
+                setLoginPage(true);
+                setSignupPage(false);
+                setPageTitle("Login");
+              }}
+              className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg font-medium shadow-md transition duration-300"
+            >
+              Login
+            </button>
+          </div>
 
-    {/* Forms */}
-    {!isLoggedIn && signupPage && <Register />}
-    {!isLoggedIn && loginPage && <Login />}
-  </div>
-);
+          {signupPage && <Register switchToLogin={() => { setLoginPage(true); setSignupPage(false); setPageTitle("Login"); }} />}
+          {loginPage && <Login onLoginSuccess={handleLoginSuccess} />}
+        </>
+      )}
+    </div>
+  );
 }
 
 export default Homepage;
